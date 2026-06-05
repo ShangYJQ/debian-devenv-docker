@@ -6,7 +6,8 @@ on:
   workflow_dispatch:
 
 env:
-  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/debian-dev
+  REGISTRY: ghcr.io
+  IMAGE_NAME: debian-dev
 
 jobs:
   build:
@@ -20,12 +21,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Set image ref
+        id: image
+        run: echo "ref=${REGISTRY}/${GITHUB_REPOSITORY_OWNER,,}/${IMAGE_NAME}" >> "$GITHUB_OUTPUT"
+
       - name: Login to GHCR
         uses: docker/login-action@v3
         with:
-          registry: ghcr.io
+          registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
 
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -35,9 +45,10 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
+          platforms: linux/arm64
           push: true
           tags: |
-            ${{ env.IMAGE_NAME }}:latest
-            ${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ steps.image.outputs.ref }}:latest
+            ${{ steps.image.outputs.ref }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
