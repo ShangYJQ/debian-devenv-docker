@@ -75,15 +75,16 @@ RUN git clone --depth 1 https://github.com/LuaLS/lua-language-server /opt/lua-la
 	ln -sf /opt/lua-language-server/bin/lua-language-server /usr/local/bin/lua-language-server && \
 	find /opt/lua-language-server -name .git -exec rm -rf {} +
 
-# 安装 rustup + Rust nightly
+# 安装 rustup + Rust nightly，cargo install 用 stable 避开 nightly 兼容性问题
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
 	sh -s -- -y --default-toolchain nightly --profile default && \
+	/root/.cargo/bin/rustup toolchain install stable --profile minimal && \
 	/root/.cargo/bin/rustup component add rust-src rustfmt clippy rust-analyzer
 
-RUN /root/.cargo/bin/cargo install neocmakelsp && \
-	/root/.cargo/bin/cargo install stylua && \
-	/root/.cargo/bin/cargo install --locked zellij && \
-	/root/.cargo/bin/cargo install --force yazi-build && \
+RUN /root/.cargo/bin/cargo +stable install neocmakelsp && \
+	/root/.cargo/bin/cargo +stable install stylua && \
+	/root/.cargo/bin/cargo +stable install --locked zellij && \
+	/root/.cargo/bin/cargo +stable install --force yazi-build && \
 	rm -rf /root/.cargo/registry /root/.cargo/git
 
 # clone nvim 配置
