@@ -2,6 +2,8 @@ FROM debian:trixie
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV CC=clang
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
 
 ARG NVIM_CONFIG_REPO="https://github.com/ShangYJQ/nvim.config.git"
 ARG NVIM_VERSION="master"
@@ -69,9 +71,9 @@ RUN git clone --depth 1 --branch "${NVIM_VERSION}" https://github.com/neovim/neo
 # 源码构建 LuaLS
 RUN git clone --depth 1 https://github.com/LuaLS/lua-language-server /opt/lua-language-server && \
 	cd /opt/lua-language-server && \
-	./make.sh && \
+	bash ./make.sh && \
 	ln -sf /opt/lua-language-server/bin/lua-language-server /usr/local/bin/lua-language-server && \
-	rm -rf /opt/lua-language-server/.git
+	find /opt/lua-language-server -name .git -exec rm -rf {} +
 
 # 安装 rustup + Rust nightly
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
@@ -81,7 +83,8 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
 RUN /root/.cargo/bin/cargo install neocmakelsp && \
 	/root/.cargo/bin/cargo install stylua && \
 	/root/.cargo/bin/cargo install --locked zellij && \
-	/root/.cargo/bin/cargo install --force yazi-build
+	/root/.cargo/bin/cargo install --force yazi-build && \
+	rm -rf /root/.cargo/registry /root/.cargo/git
 
 # clone nvim 配置
 RUN mkdir -p /root/.config && git clone "${NVIM_CONFIG_REPO}" /root/.config/nvim;
@@ -89,9 +92,11 @@ RUN mkdir -p /root/.config && git clone "${NVIM_CONFIG_REPO}" /root/.config/nvim
 RUN npm install -g tree-sitter-cli \
 	dockerfile-language-server-nodejs \
 	gh-actions-language-server \
-	oxfmt
+	oxfmt && \
+	npm cache clean --force
 
-RUN GOBIN=/usr/local/bin go install github.com/owenrumney/make-ls/cmd/make-ls@latest
+RUN GOBIN=/usr/local/bin go install github.com/owenrumney/make-ls/cmd/make-ls@latest && \
+	rm -rf /root/go/pkg/mod /root/.cache/go-build
 
 # vim.pack 非交互安装插件
 RUN nvim --headless \
