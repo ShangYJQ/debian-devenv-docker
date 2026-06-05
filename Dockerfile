@@ -1,6 +1,7 @@
 FROM debian:trixie
 
 ENV DEBIAN_FRONTEND=noninteractive
+ENV CC=clang
 
 ARG NVIM_CONFIG_REPO="https://github.com/ShangYJQ/nvim.config.git"
 ARG NVIM_VERSION="master"
@@ -22,6 +23,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 	tar \
 	xz-utils \
 	fish \
+	openssh-server \
 	ripgrep \
 	fd-find \
 	fzf \
@@ -30,6 +32,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 	python3-venv \
 	nodejs \
 	npm \
+	golang-go \
 	libtree-sitter-dev \
 	clang \
 	gdb \
@@ -51,6 +54,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Debian 里 fd 叫 fdfind，很多 nvim 配置默认找 fd
 RUN ln -sf /usr/bin/fdfind /usr/local/bin/fd
 
+RUN mkdir -p /run/sshd /root/.ssh /etc/ssh/sshd_config.d && \
+	chmod 700 /root/.ssh && \
+	printf "PermitRootLogin yes\nPasswordAuthentication yes\nPubkeyAuthentication yes\n" > /etc/ssh/sshd_config.d/debian-dev.conf
+
 # 源码构建 Neovim
 RUN git clone --depth 1 --branch "${NVIM_VERSION}" https://github.com/neovim/neovim.git /tmp/neovim && \
 	cd /tmp/neovim && \
@@ -59,18 +66,32 @@ RUN git clone --depth 1 --branch "${NVIM_VERSION}" https://github.com/neovim/neo
 	cd / && \
 	rm -rf /tmp/neovim
 
+# 源码构建 LuaLS
+RUN git clone --depth 1 https://github.com/LuaLS/lua-language-server /opt/lua-language-server && \
+	cd /opt/lua-language-server && \
+	./make.sh && \
+	ln -sf /opt/lua-language-server/bin/lua-language-server /usr/local/bin/lua-language-server && \
+	rm -rf /opt/lua-language-server/.git
+
 # 安装 rustup + Rust nightly
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
 	sh -s -- -y --default-toolchain nightly --profile default && \
 	/root/.cargo/bin/rustup component add rust-src rustfmt clippy rust-analyzer
 
+RUN /root/.cargo/bin/cargo install neocmakelsp && \
+	/root/.cargo/bin/cargo install stylua && \
+	/root/.cargo/bin/cargo install --locked zellij && \
+	/root/.cargo/bin/cargo install --force yazi-build
+
 # clone nvim 配置
 RUN mkdir -p /root/.config && git clone "${NVIM_CONFIG_REPO}" /root/.config/nvim;
 
-RUN npm install -g tree-sitter-cli
+RUN npm install -g tree-sitter-cli \
+	dockerfile-language-server-nodejs \
+	gh-actions-language-server \
+	oxfmt
 
-# GCC 14 can OOM while compiling large generated tree-sitter parsers under Colima.
-ENV CC=clang
+RUN GOBIN=/usr/local/bin go install github.com/owenrumney/make-ls/cmd/make-ls@latest
 
 # vim.pack 非交互安装插件
 RUN nvim --headless \
@@ -79,7 +100,14 @@ RUN nvim --headless \
 
 # clone fish 配置
 COPY fish /root/.config/fish
+COPY clangd /root/.config/clangd
+COPY zellij /root/.config/zellij
+COPY entrypoint.sh /usr/local/bin/entrypoint
+
+RUN chmod +x /usr/local/bin/entrypoint
+
+EXPOSE 22
 
 WORKDIR /work
 
-CMD ["fish"]
+ENTRYPOINT ["/usr/local/bin/entrypoint"]
