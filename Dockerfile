@@ -7,7 +7,7 @@ ENV LC_ALL=C.UTF-8
 ENV PATH="/root/.cargo/bin:${PATH}"
 
 ARG NVIM_CONFIG_REPO="https://github.com/ShangYJQ/nvim.config.git"
-ARG NVIM_VERSION="master"
+ARG NVIM_VERSION="v0.12.2"
 
 SHELL ["/bin/bash", "-lc"]
 
@@ -61,7 +61,7 @@ RUN mkdir -p /run/sshd /root/.ssh /etc/ssh/sshd_config.d && \
 	chmod 700 /root/.ssh && \
 	printf "PermitRootLogin yes\nPasswordAuthentication yes\nPubkeyAuthentication yes\n" > /etc/ssh/sshd_config.d/debian-dev.conf
 
-# 源码构建 Neovim
+# 源码构建 Neovim；默认固定到 release tag，避免 master 的依赖变动导致构建不稳定
 RUN git clone --depth 1 --branch "${NVIM_VERSION}" https://github.com/neovim/neovim.git /tmp/neovim && \
 	cd /tmp/neovim && \
 	make CMAKE_BUILD_TYPE=Release && \

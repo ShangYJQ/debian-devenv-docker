@@ -4,6 +4,8 @@
 docker buildx build --platform linux/arm64 -t debian-dev --load .
 ```
 
+默认构建 Neovim release tag；如需 nightly/master，可追加 `--build-arg NVIM_VERSION=master`。
+
 ## Run
 
 ```bash
