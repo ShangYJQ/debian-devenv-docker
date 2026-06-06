@@ -85,11 +85,14 @@ RUN git clone --depth 1 https://github.com/LuaLS/lua-language-server /tmp/lua-la
 # 安装 rustup + Rust nightly；构建时使用 default profile，完成后删除文档和缓存
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
 	sh -s -- -y --default-toolchain nightly --profile default && \
+	printf 'export PATH="/root/.cargo/bin:$PATH"\n' > /etc/profile.d/cargo.sh && \
+	. "$HOME/.cargo/env" && \
+	rustup toolchain install stable --profile minimal && \
 	rustup component add rust-src rustfmt clippy rust-analyzer && \
-	cargo install neocmakelsp && \
-	cargo install stylua && \
-	cargo install --locked zellij && \
-	cargo install --force yazi-build && \
+	cargo +stable install neocmakelsp && \
+	cargo +stable install stylua && \
+	cargo +stable install --locked zellij && \
+	cargo +stable install --force yazi-build && \
 	rustup component remove rust-docs && \
 	rm -rf /root/.cargo/registry /root/.cargo/git /root/.cache /root/.rustup/downloads /root/.rustup/tmp /tmp/*
 
