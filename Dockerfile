@@ -4,6 +4,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV CC=clang
 ENV LANG=C.UTF-8
 ENV LC_ALL=C.UTF-8
+ENV PATH="/root/.cargo/bin:${PATH}"
 
 ARG NVIM_CONFIG_REPO="https://github.com/ShangYJQ/nvim.config.git"
 ARG NVIM_VERSION="master"
@@ -69,23 +70,28 @@ RUN git clone --depth 1 --branch "${NVIM_VERSION}" https://github.com/neovim/neo
 	rm -rf /tmp/neovim
 
 # 源码构建 LuaLS
-RUN git clone --depth 1 https://github.com/LuaLS/lua-language-server /opt/lua-language-server && \
-	cd /opt/lua-language-server && \
-	bash ./make.sh && \
+RUN git clone --depth 1 https://github.com/LuaLS/lua-language-server /tmp/lua-language-server && \
+	cd /tmp/lua-language-server && \
+	git submodule update --init --recursive && \
+	cd 3rd/luamake && \
+	./compile/build.sh && \
+	cd /tmp/lua-language-server && \
+	3rd/luamake/luamake rebuild --notest && \
+	mkdir -p /opt/lua-language-server && \
+	cp -a bin main.lua debugger.lua LICENSE changelog.md locale doc meta script /opt/lua-language-server/ && \
 	ln -sf /opt/lua-language-server/bin/lua-language-server /usr/local/bin/lua-language-server && \
-	find /opt/lua-language-server -name .git -exec rm -rf {} +
+	rm -rf /tmp/lua-language-server
 
-# 安装 rustup + Rust nightly，cargo install 用 stable 避开 nightly 兼容性问题
+# 安装 rustup + Rust nightly；构建时使用 default profile，完成后删除文档和缓存
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
 	sh -s -- -y --default-toolchain nightly --profile default && \
-	/root/.cargo/bin/rustup toolchain install stable --profile minimal && \
-	/root/.cargo/bin/rustup component add rust-src rustfmt clippy rust-analyzer
-
-RUN /root/.cargo/bin/cargo +stable install neocmakelsp && \
-	/root/.cargo/bin/cargo +stable install stylua && \
-	/root/.cargo/bin/cargo +stable install --locked zellij && \
-	/root/.cargo/bin/cargo +stable install --force yazi-build && \
-	rm -rf /root/.cargo/registry /root/.cargo/git
+	rustup component add rust-src rustfmt clippy rust-analyzer && \
+	cargo install neocmakelsp && \
+	cargo install stylua && \
+	cargo install --locked zellij && \
+	cargo install --force yazi-build && \
+	rustup component remove rust-docs && \
+	rm -rf /root/.cargo/registry /root/.cargo/git /root/.cache /root/.rustup/downloads /root/.rustup/tmp /tmp/*
 
 # clone nvim 配置
 RUN mkdir -p /root/.config && git clone "${NVIM_CONFIG_REPO}" /root/.config/nvim;
@@ -102,7 +108,8 @@ RUN GOBIN=/usr/local/bin go install github.com/owenrumney/make-ls/cmd/make-ls@la
 # vim.pack 非交互安装插件
 RUN nvim --headless \
 	"+lua vim.pack.update(nil, { force = true })" \
-	"+qa"
+	"+qa" && \
+	rm -rf /root/.cargo/registry /root/.cargo/git /root/.cache /tmp/*
 
 # clone fish 配置
 COPY fish /root/.config/fish
