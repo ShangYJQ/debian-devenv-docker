@@ -93,6 +93,7 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
 	cargo +stable install stylua && \
 	cargo +stable install --locked zellij && \
 	cargo +stable install --force yazi-build && \
+	rustup toolchain uninstall stable && \
 	rustup component remove rust-docs && \
 	rm -rf /root/.cargo/registry /root/.cargo/git /root/.cache /root/.rustup/downloads /root/.rustup/tmp /tmp/*
 
