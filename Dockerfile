@@ -30,9 +30,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 	ripgrep \
 	fd-find \
 	fzf \
-	python3 \
-	python3-pip \
-	python3-venv \
 	nodejs \
 	npm \
 	golang-go \
@@ -50,12 +47,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 	eza \
 	sudo \
 	&& rm -rf \
-		/var/lib/apt/lists/* \
-		/usr/share/doc/* \
-		/usr/share/info/* \
-		/usr/share/locale/* \
-		/usr/share/man/* \
-		/var/cache/man/*
+	/var/lib/apt/lists/* \
+	/usr/share/doc/* \
+	/usr/share/info/* \
+	/usr/share/locale/* \
+	/usr/share/man/* \
+	/var/cache/man/*
 
 # Debian 里 fd 叫 fdfind，很多 nvim 配置默认找 fd
 RUN ln -sf /usr/bin/fdfind /usr/local/bin/fd
